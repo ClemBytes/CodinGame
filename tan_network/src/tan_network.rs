@@ -1,3 +1,4 @@
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{self, BufRead};
 
@@ -14,14 +15,13 @@ pub fn run() {
 
 #[derive(Debug)]
 struct Stop {
-    id: String,
     name: String,
     latitude: f64,
     longitude: f64,
 }
 
 impl Stop {
-    fn distance(&self, other: Self) -> f64 {
+    fn distance(&self, other: &Self) -> f64 {
         let x =
             (other.longitude - self.longitude) * f64::cos((self.latitude + other.latitude) / 2.);
         let y = other.latitude - self.latitude;
@@ -33,10 +33,7 @@ impl Stop {
 struct NetworkDescription {
     start_id: String,
     end_id: String,
-    nb_stops: u32,
-    stops: Vec<Stop>,
-    nb_connections: u32,
-    connections: Vec<(String, String)>,
+    graph: HashMap<String, Vec<(String, f64)>>,
 }
 
 impl NetworkDescription {
@@ -56,7 +53,7 @@ impl NetworkDescription {
         let nb_stops: u32 = input_line.trim().parse().unwrap();
 
         // List of stops
-        let mut stops: Vec<Stop> = vec![];
+        let mut stops: HashMap<String, Stop> = HashMap::new();
         for _ in 0..nb_stops {
             input_line = lines.next().unwrap().unwrap();
             let stop = input_line.trim().split_once(":").unwrap().1;
@@ -75,12 +72,14 @@ impl NetworkDescription {
             let latitude: f64 = stop_infos[3].parse().unwrap();
             let longitude: f64 = stop_infos[4].parse().unwrap();
 
-            stops.push(Stop {
+            stops.insert(
                 id,
-                name,
-                latitude,
-                longitude,
-            });
+                Stop {
+                    name,
+                    latitude,
+                    longitude,
+                },
+            );
         }
 
         // Number of connections in network
@@ -88,24 +87,22 @@ impl NetworkDescription {
         let nb_connections: u32 = input_line.trim().parse().unwrap();
 
         // List of connections
-        let mut connections: Vec<(String, String)> = vec![];
+        let mut graph: HashMap<String, Vec<(String, f64)>> = HashMap::new();
         for _ in 0..nb_connections {
             input_line = lines.next().unwrap().unwrap();
             let (start, end) = input_line.split_once(" ").unwrap();
-            connections.push((
-                start.split_once(":").unwrap().1.to_string(),
-                end.split_once(":").unwrap().1.to_string(),
-            ));
+            let start_id = start.split_once(":").unwrap().1.to_string();
+            let start_stop = stops.get(&start_id).unwrap();
+            let end_id = end.split_once(":").unwrap().1.to_string();
+            let end_stop = stops.get(&end_id).unwrap();
+            let e = graph.entry(start_id).or_default();
+            e.push((end_id, start_stop.distance(end_stop)));
         }
 
-        let description = NetworkDescription {
+        NetworkDescription {
             start_id,
             end_id,
-            nb_stops,
-            stops,
-            nb_connections,
-            connections,
-        };
-        description
+            graph,
+        }
     }
 }
