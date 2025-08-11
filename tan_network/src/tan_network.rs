@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::{self, BufRead};
 
 #[test]
-fn test () {
+fn test() {
     run();
 }
 
@@ -18,6 +18,15 @@ struct Stop {
     name: String,
     latitude: f64,
     longitude: f64,
+}
+
+impl Stop {
+    fn distance(&self, other: Self) -> f64 {
+        let x =
+            (other.longitude - self.longitude) * f64::cos((self.latitude + other.latitude) / 2.);
+        let y = other.latitude - self.latitude;
+        f64::sqrt(x * x + y * y) * 6371.
+    }
 }
 
 #[derive(Debug)]
@@ -57,7 +66,7 @@ impl NetworkDescription {
             let id: String = stop_infos[0].to_string();
 
             // Stop name
-            let mut name  = stop_infos[1].chars();
+            let mut name = stop_infos[1].chars();
             name.next(); // Delete opening "
             name.next_back(); // Delete closing "
             let name = name.as_str().to_string();
@@ -85,11 +94,18 @@ impl NetworkDescription {
             let (start, end) = input_line.split_once(" ").unwrap();
             connections.push((
                 start.split_once(":").unwrap().1.to_string(),
-                end.split_once(":").unwrap().1.to_string()
+                end.split_once(":").unwrap().1.to_string(),
             ));
         }
 
-        let description = NetworkDescription { start_id, end_id, nb_stops, stops, nb_connections, connections, };
+        let description = NetworkDescription {
+            start_id,
+            end_id,
+            nb_stops,
+            stops,
+            nb_connections,
+            connections,
+        };
         description
     }
 }
