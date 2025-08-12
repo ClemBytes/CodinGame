@@ -1,13 +1,13 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap};
 use std::io;
 use std::cmp::Ordering;
 
 fn main() {
     let input = NetworkDescription::parse();
-    println!("{input:#?}");
+    input.shortest_path();
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Stop {
     name: String,
     latitude: f64,
@@ -23,7 +23,7 @@ impl Stop {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 struct Node {
     id: String,
     distance: f64,
@@ -44,7 +44,7 @@ impl Ord for Node {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct NetworkDescription {
     start_id: String,
     end_id: String,
@@ -122,6 +122,57 @@ impl NetworkDescription {
             end_id,
             stops,
             graph,
+        }
+    }
+
+    fn shortest_path(&self) {
+        let mut visited_nodes = BTreeSet::new();
+        let mut min_heap: BinaryHeap<Node> = BinaryHeap::new();
+        let mut previous: BTreeMap<Node, Node> = BTreeMap::new();
+        min_heap.push(Node { id: self.start_id.clone(), distance: 0. });
+        let mut impossible = true;
+        while let Some(current_node) = min_heap.pop() {
+            if visited_nodes.contains(&current_node) {
+                continue;
+            }
+            visited_nodes.insert(current_node.clone());
+
+            // Found the end ?
+            if current_node.id == self.end_id {
+                impossible = false;
+                // Backtrace the path and store it
+                let mut path: Vec<String> = vec![];
+                let mut current = current_node.clone();
+                let mut current_name = self.stops.get(&current.id).unwrap().name.clone();
+                let start_name = self.stops.get(&self.start_id).unwrap().name.clone();
+                path.push(current_name.clone());
+                // println!("FOUND!");
+                while current_name != start_name {
+                    let prev = previous.get(&current).unwrap();
+                    let prev_name = &self.stops.get(&prev.id).unwrap().name;
+                    // println!("prev: {prev} | ");
+                    path.push(prev_name.clone());
+                    current = prev.clone();
+                    current_name = self.stops.get(&current.id).unwrap().name.clone();
+                }
+
+                // Then print it
+                while let Some(name) = path.pop() {
+                    println!("{name}");
+                }
+            }
+
+            // Otherwise
+            let neighbors = self.graph.get(&current_node.id).unwrap();
+            for neighbor in neighbors {
+                // Update previous
+                previous.insert(neighbor.clone(), current_node.clone());
+                // Add node to heap
+                min_heap.push(neighbor.clone());
+            }
+        }
+        if impossible {
+            println!("IMPOSSIBLE");
         }
     }
 }
