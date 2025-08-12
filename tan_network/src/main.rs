@@ -1,6 +1,6 @@
+use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap};
 use std::io;
-use std::cmp::Ordering;
 
 fn main() {
     let input = NetworkDescription::parse();
@@ -19,27 +19,28 @@ impl Stop {
         let x =
             (other.longitude - self.longitude) * f64::cos((self.latitude + other.latitude) / 2.);
         let y = other.latitude - self.latitude;
-        f64::sqrt(x * x + y * y) * 6371.
+        f64::hypot(x, y) * 6371.
     }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-struct Node {
+struct StateAndDistance {
     id: String,
     distance: f64,
+    parent_stop_id: String,
 }
 
-impl Eq for Node {}
+impl Eq for StateAndDistance {}
 
-impl PartialOrd for Node {
+impl PartialOrd for StateAndDistance {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        // Other and self inversed to do a MIN-heap
         other.distance.partial_cmp(&self.distance)
     }
 }
 
-impl Ord for Node {
+impl Ord for StateAndDistance {
     fn cmp(&self, other: &Self) -> Ordering {
-        // Other and self inversed to do a MIN-heap
         self.partial_cmp(other).unwrap()
     }
 }
@@ -49,7 +50,7 @@ struct NetworkDescription {
     start_id: String,
     end_id: String,
     stops: HashMap<String, Stop>,
-    graph: HashMap<String, Vec<Node>>,
+    graph: HashMap<String, Vec<StateAndDistance>>,
 }
 
 impl NetworkDescription {
@@ -92,19 +93,19 @@ impl NetworkDescription {
                 id,
                 Stop {
                     name,
-                    latitude,
-                    longitude,
+                    latitude: latitude.to_radians(),
+                    longitude: longitude.to_radians(),
                 },
             );
         }
 
         // Number of connections in network
-        let mut input_line = String::new();
+        input_line.clear();
         io::stdin().read_line(&mut input_line).unwrap();
         let nb_connections: u32 = input_line.trim().parse().unwrap();
 
         // List of connections
-        let mut graph: HashMap<String, Vec<Node>> = HashMap::new();
+        let mut graph: HashMap<String, Vec<StateAndDistance>> = HashMap::new();
         for _ in 0..nb_connections {
             let mut input_line = String::new();
             io::stdin().read_line(&mut input_line).unwrap();
@@ -112,10 +113,116 @@ impl NetworkDescription {
             let start_id = start.split_once(":").unwrap().1.to_string();
             let start_stop = stops.get(&start_id).unwrap();
             let end_id = end.split_once(":").unwrap().1.to_string();
+            if start_id == end_id {
+                continue;
+            }
             let end_stop = stops.get(&end_id).unwrap();
             let e = graph.entry(start_id).or_default();
-            e.push(Node { id: end_id, distance: start_stop.distance(end_stop) });
+            e.push(StateAndDistance {
+                id: end_id,
+                distance: start_stop.distance(end_stop),
+                parent_stop_id: "".to_string(),
+            });
         }
+
+        /*
+        fn stop_id_from_name(stops: &HashMap<String, Stop>, name: &str) -> String {
+            for (id, stop) in stops {
+                if stop.name == name {
+                    return id.clone();
+                }
+            }
+            unreachable!();
+        }
+
+        println!("{graph:#?}");
+
+        let mut current_stop_id = "EINS".to_string();
+        let mut total = 0f64;
+        
+        for next_stop_name in [
+            "Geraudiere",
+            "Petite Censive",
+            "Riviere",
+            "Recteur Schmitt",
+            "Ecole Centrale - Audencia",
+            "Facultes",
+            "Morrhonniere",
+            "Michelet",
+            "St-Felix",
+            "Motte Rouge",
+            "St-Mihiel",
+            "50 Otages",
+            "Place du Cirque",
+            "Commerce",
+            "Republique",
+            "Pirmil",
+            "Pont-Rousseau - Martyrs",
+            "8 Mai",
+            "Baliniere",
+            "Melies",
+            "Croix de Reze",
+            "Moulin a l'Huile",
+            "Jaguere",
+            "Jules Valles",
+            "Les Ailes",
+            "Galheur",
+        ] {
+        
+        for next_stop_name in [
+            "Rene Cassin",
+            "Chene des Anglais",
+            "La Coulee",
+            "Bertrand",
+            "Route de la Chapelle",
+            "Bout des Paves",
+            "Vallee",
+            "Pont du Cens",
+            "Foret",
+            "La Close",
+            "Berlioz",
+            "Rennes - Longchamp",
+            "Americains",
+            "Rond-Point de Rennes",
+            "Le Goffic",
+            "Bruneau",
+            "Bel Air",
+            "St-Stanislas",
+            "Talensac",
+            "50 Otages",
+            "Place du Cirque",
+            "Commerce",
+            "Hotel Dieu",
+            "Aime Delrue",
+            "Vincent Gache",
+            "Wattignies",
+            "Mangin",
+            "Pirmil",
+            "Pont-Rousseau - Martyrs",
+            "8 Mai",
+            "Baliniere",
+            "Melies",
+            "Croix de Reze",
+            "Moulin a l'Huile",
+            "Jaguere",
+            "Jules Valles",
+            "Les Ailes",
+            "Galheur",
+        ] {
+            let state_and_distance = graph
+                .get(&current_stop_id)
+                .unwrap()
+                .iter()
+                .find(|s| stops.get(&s.id).unwrap().name == next_stop_name)
+                .unwrap();
+            let next_stop_id = &state_and_distance.id;
+            let d = state_and_distance.distance;
+            println!("{current_stop_id} {next_stop_id} {d}");
+            total += d;
+            current_stop_id = next_stop_id.to_string();
+        }
+        println!("{total}");
+        */
 
         NetworkDescription {
             start_id,
@@ -127,52 +234,53 @@ impl NetworkDescription {
 
     fn shortest_path(&self) {
         let mut visited_nodes = BTreeSet::new();
-        let mut min_heap: BinaryHeap<Node> = BinaryHeap::new();
-        let mut previous: BTreeMap<Node, Node> = BTreeMap::new();
-        min_heap.push(Node { id: self.start_id.clone(), distance: 0. });
-        let mut impossible = true;
+        let mut min_heap: BinaryHeap<StateAndDistance> = BinaryHeap::new();
+        let mut previous: BTreeMap<String, String> = BTreeMap::new();
+        min_heap.push(StateAndDistance {
+            id: self.start_id.clone(),
+            distance: 0.,
+            parent_stop_id: "".to_string(),
+        });
         while let Some(current_node) = min_heap.pop() {
-            if visited_nodes.contains(&current_node) {
+            if visited_nodes.contains(&current_node.id) {
                 continue;
             }
-            visited_nodes.insert(current_node.clone());
+            visited_nodes.insert(current_node.id.clone());
+            previous.insert(current_node.id.clone(), current_node.parent_stop_id.clone());
 
             // Found the end ?
             if current_node.id == self.end_id {
-                impossible = false;
                 // Backtrace the path and store it
                 let mut path: Vec<String> = vec![];
-                let mut current = current_node.clone();
-                let mut current_name = self.stops.get(&current.id).unwrap().name.clone();
-                let start_name = self.stops.get(&self.start_id).unwrap().name.clone();
-                path.push(current_name.clone());
-                // println!("FOUND!");
-                while current_name != start_name {
-                    let prev = previous.get(&current).unwrap();
-                    let prev_name = &self.stops.get(&prev.id).unwrap().name;
-                    // println!("prev: {prev} | ");
-                    path.push(prev_name.clone());
-                    current = prev.clone();
-                    current_name = self.stops.get(&current.id).unwrap().name.clone();
+                let current = current_node.clone();
+                path.push(current.id.clone());
+                let mut id = current.id;
+                while id != self.start_id {
+                    let prev = previous.get(&id).unwrap();
+                    path.push(prev.clone());
+                    id = prev.clone();
                 }
 
                 // Then print it
-                while let Some(name) = path.pop() {
-                    println!("{name}");
+                while let Some(id) = path.pop() {
+                    println!("{}", self.stops.get(&id).unwrap().name);
                 }
+                return;
             }
 
             // Otherwise
             let neighbors = self.graph.get(&current_node.id).unwrap();
             for neighbor in neighbors {
                 // Update previous
-                previous.insert(neighbor.clone(), current_node.clone());
+                assert_ne!(neighbor.id, current_node.id, "{:?}", neighbor);
                 // Add node to heap
-                min_heap.push(neighbor.clone());
+                min_heap.push(StateAndDistance {
+                    id: neighbor.id.clone(),
+                    distance: current_node.distance + neighbor.distance,
+                    parent_stop_id: current_node.id.clone(),
+                });
             }
         }
-        if impossible {
-            println!("IMPOSSIBLE");
-        }
+        println!("IMPOSSIBLE");
     }
 }
