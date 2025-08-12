@@ -1,10 +1,8 @@
 use std::collections::HashMap;
-use std::fs::File;
-use std::io::{self, BufRead};
+use std::io;
 
 fn main() {
-    let input_path = "input/ex1";
-    let input = NetworkDescription::parse(input_path);
+    let input = NetworkDescription::parse();
     println!("{input:#?}");
 }
 
@@ -28,29 +26,30 @@ impl Stop {
 struct NetworkDescription {
     start_id: String,
     end_id: String,
+    stops: HashMap<String, Stop>,
     graph: HashMap<String, Vec<(String, f64)>>,
 }
 
 impl NetworkDescription {
-    fn parse(input_path: &str) -> Self {
-        let file = File::open(input_path).unwrap();
-        let reader = io::BufReader::new(file);
-        let mut lines = reader.lines();
-
+    fn parse() -> Self {
         // Start & end points
-        let mut input_line = lines.next().unwrap().unwrap();
+        let mut input_line = String::new();
+        io::stdin().read_line(&mut input_line).unwrap();
         let start_id = input_line.trim().split_once(":").unwrap().1.to_string();
-        input_line = lines.next().unwrap().unwrap();
+        let mut input_line = String::new();
+        io::stdin().read_line(&mut input_line).unwrap();
         let end_id = input_line.trim().split_once(":").unwrap().1.to_string();
 
         // Number of stops in network
-        input_line = lines.next().unwrap().unwrap();
+        let mut input_line = String::new();
+        io::stdin().read_line(&mut input_line).unwrap();
         let nb_stops: u32 = input_line.trim().parse().unwrap();
 
         // List of stops
         let mut stops: HashMap<String, Stop> = HashMap::new();
         for _ in 0..nb_stops {
-            input_line = lines.next().unwrap().unwrap();
+            let mut input_line = String::new();
+            io::stdin().read_line(&mut input_line).unwrap();
             let stop = input_line.trim().split_once(":").unwrap().1;
             let stop_infos: Vec<&str> = stop.split(",").collect();
 
@@ -78,14 +77,16 @@ impl NetworkDescription {
         }
 
         // Number of connections in network
-        input_line = lines.next().unwrap().unwrap();
+        let mut input_line = String::new();
+        io::stdin().read_line(&mut input_line).unwrap();
         let nb_connections: u32 = input_line.trim().parse().unwrap();
 
         // List of connections
         let mut graph: HashMap<String, Vec<(String, f64)>> = HashMap::new();
         for _ in 0..nb_connections {
-            input_line = lines.next().unwrap().unwrap();
-            let (start, end) = input_line.split_once(" ").unwrap();
+            let mut input_line = String::new();
+            io::stdin().read_line(&mut input_line).unwrap();
+            let (start, end) = input_line.trim().split_once(" ").unwrap();
             let start_id = start.split_once(":").unwrap().1.to_string();
             let start_stop = stops.get(&start_id).unwrap();
             let end_id = end.split_once(":").unwrap().1.to_string();
@@ -97,6 +98,7 @@ impl NetworkDescription {
         NetworkDescription {
             start_id,
             end_id,
+            stops,
             graph,
         }
     }
