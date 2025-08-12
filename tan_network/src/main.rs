@@ -1,13 +1,8 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self, BufRead};
 
-#[test]
-fn test() {
-    run();
-}
-
-pub fn run() {
+fn main() {
     let input_path = "input/ex1";
     let input = NetworkDescription::parse(input_path);
     println!("{input:#?}");
