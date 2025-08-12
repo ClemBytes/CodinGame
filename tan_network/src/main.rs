@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::io;
+use std::cmp::Ordering;
 
 fn main() {
     let input = NetworkDescription::parse();
@@ -22,12 +23,33 @@ impl Stop {
     }
 }
 
+#[derive(Debug, PartialEq)]
+struct Node {
+    id: String,
+    distance: f64,
+}
+
+impl Eq for Node {}
+
+impl PartialOrd for Node {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        other.distance.partial_cmp(&self.distance)
+    }
+}
+
+impl Ord for Node {
+    fn cmp(&self, other: &Self) -> Ordering {
+        // Other and self inversed to do a MIN-heap
+        self.partial_cmp(other).unwrap()
+    }
+}
+
 #[derive(Debug)]
 struct NetworkDescription {
     start_id: String,
     end_id: String,
     stops: HashMap<String, Stop>,
-    graph: HashMap<String, Vec<(String, f64)>>,
+    graph: HashMap<String, Vec<Node>>,
 }
 
 impl NetworkDescription {
@@ -82,7 +104,7 @@ impl NetworkDescription {
         let nb_connections: u32 = input_line.trim().parse().unwrap();
 
         // List of connections
-        let mut graph: HashMap<String, Vec<(String, f64)>> = HashMap::new();
+        let mut graph: HashMap<String, Vec<Node>> = HashMap::new();
         for _ in 0..nb_connections {
             let mut input_line = String::new();
             io::stdin().read_line(&mut input_line).unwrap();
@@ -92,7 +114,7 @@ impl NetworkDescription {
             let end_id = end.split_once(":").unwrap().1.to_string();
             let end_stop = stops.get(&end_id).unwrap();
             let e = graph.entry(start_id).or_default();
-            e.push((end_id, start_stop.distance(end_stop)));
+            e.push(Node { id: end_id, distance: start_stop.distance(end_stop) });
         }
 
         NetworkDescription {
