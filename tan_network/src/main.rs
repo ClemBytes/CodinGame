@@ -24,22 +24,24 @@ impl Stop {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-struct StateWithParent {
-    id: String,
+struct StateWithParent<'a> {
+    id: &'a str,
     distance_from_start: f64,
-    parent_stop_id: String,
+    parent_stop_id: &'a str,
 }
 
-impl Eq for StateWithParent {}
+impl Eq for StateWithParent<'_> {}
 
-impl PartialOrd for StateWithParent {
+impl PartialOrd for StateWithParent<'_> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         // Other and self inversed to do a MIN-heap
-        other.distance_from_start.partial_cmp(&self.distance_from_start)
+        other
+            .distance_from_start
+            .partial_cmp(&self.distance_from_start)
     }
 }
 
-impl Ord for StateWithParent {
+impl Ord for StateWithParent<'_> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.partial_cmp(other).unwrap()
     }
@@ -80,10 +82,12 @@ impl NetworkDescription {
             let id: String = stop_infos[0].to_string();
 
             // Stop name
-            let mut name = stop_infos[1].chars();
-            name.next(); // Delete opening "
-            name.next_back(); // Delete closing "
-            let name = name.as_str().to_string();
+            let name = stop_infos[1]
+                .strip_prefix('"')
+                .unwrap()
+                .strip_suffix('"')
+                .unwrap()
+                .to_string();
 
             // Stop latitude & longitude
             let latitude: f64 = stop_infos[3].parse().unwrap();
@@ -127,56 +131,59 @@ impl NetworkDescription {
         }
     }
 
-    fn distance_between_two_stops(&self, id1: String, id2: String) -> f64 {
-        self.stops.get(&id1).unwrap().distance(self.stops.get(&id2).unwrap())
+    fn distance_between_two_stops(&self, id1: &str, id2: &str) -> f64 {
+        self.stops
+            .get(id1)
+            .unwrap()
+            .distance(self.stops.get(id2).unwrap())
     }
 
     fn shortest_path(&self) {
         let mut visited_nodes = BTreeSet::new();
         let mut min_heap: BinaryHeap<StateWithParent> = BinaryHeap::new();
-        let mut previous: BTreeMap<String, String> = BTreeMap::new();
+        let mut previous: BTreeMap<&str, &str> = BTreeMap::new();
         min_heap.push(StateWithParent {
-            id: self.start_id.clone(),
+            id: &self.start_id,
             distance_from_start: 0.,
-            parent_stop_id: "".to_string(),
+            parent_stop_id: "",
         });
         while let Some(current_state) = min_heap.pop() {
             if visited_nodes.contains(&current_state.id) {
                 continue;
             }
-            visited_nodes.insert(current_state.id.clone());
-            previous.insert(current_state.id.clone(), current_state.parent_stop_id.clone());
+            visited_nodes.insert(current_state.id);
+            previous.insert(current_state.id, current_state.parent_stop_id);
 
             // Found the end ?
             if current_state.id == self.end_id {
                 // Backtrace the path and store it
-                let mut path: Vec<String> = vec![];
-                let current = current_state.clone();
-                path.push(current.id.clone());
-                let mut id = current.id;
+                let mut path: Vec<&str> = vec![];
+                path.push(current_state.id);
+                let mut id = current_state.id;
                 while id != self.start_id {
-                    let prev = previous.get(&id).unwrap();
-                    path.push(prev.clone());
-                    id = prev.clone();
+                    let prev = *previous.get(id).unwrap();
+                    path.push(prev);
+                    id = prev;
                 }
 
                 // Then print it
                 while let Some(id) = path.pop() {
-                    println!("{}", self.stops.get(&id).unwrap().name);
+                    println!("{}", self.stops.get(id).unwrap().name);
                 }
                 return;
             }
 
             // Otherwise
-            let neighbors = self.graph.get(&current_state.id).unwrap();
+            let neighbors = self.graph.get(current_state.id).unwrap();
             for neighbor in neighbors {
                 // Update previous
-                assert_ne!(neighbor.clone(), current_state.id.clone(), "{:?}", neighbor);
+                assert_ne!(neighbor, current_state.id, "{neighbor:?}");
                 // Add node to heap
                 min_heap.push(StateWithParent {
-                    id: neighbor.clone(),
-                    distance_from_start: current_state.distance_from_start + self.distance_between_two_stops(neighbor.to_string(), current_state.id.clone()),
-                    parent_stop_id: current_state.id.clone(),
+                    id: neighbor,
+                    distance_from_start: current_state.distance_from_start
+                        + self.distance_between_two_stops(neighbor, current_state.id),
+                    parent_stop_id: current_state.id,
                 });
             }
         }
