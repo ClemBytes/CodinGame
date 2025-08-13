@@ -10,16 +10,23 @@ fn main() {
         }
     }
 
+    let mut all_painted = true;
     let mut start = 0;
     for i in 1..fence_len {
         if fence[i - 1] && !fence[i] {
             start = i;
         } else if !fence[i - 1] && fence[i] {
+            all_painted = false;
             println!("{start} {i}");
         }
     }
     if !fence[fence_len - 1] {
+        all_painted = false;
         println!("{start} {fence_len}");
+    }
+
+    if all_painted {
+        println!("All painted");
     }
 }
 
