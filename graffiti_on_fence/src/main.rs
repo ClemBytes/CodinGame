@@ -1,32 +1,43 @@
 use std::io;
 
 fn main() {
-    let (fence_len, sections) = parse();
-    
-    let mut fence = vec![false; fence_len];
-    for (start, end) in sections {
-        for i in start..end {
-            fence[i] = true;
+    let (fence_len, mut sections) = parse();
+
+    // Sort sections by start points
+    sections.sort();
+
+    // Then merge touching of overlapping intervals
+    let mut merged_sections: Vec<(usize, usize)> = vec![];
+    let mut current_section = sections[0];
+    for (i, next_section) in sections.iter().enumerate() {
+        if i == 0 {
+            continue;
+        }
+        if next_section.0 <= current_section.1 {
+            current_section.1 = current_section.1.max(next_section.1);
+        } else {
+            merged_sections.push(current_section);
+            current_section = *next_section;
         }
     }
+    merged_sections.push(current_section);
 
-    let mut all_painted = true;
-    let mut start = 0;
-    for i in 1..fence_len {
-        if fence[i - 1] && !fence[i] {
-            start = i;
-        } else if !fence[i - 1] && fence[i] {
-            all_painted = false;
-            println!("{start} {i}");
-        }
-    }
-    if !fence[fence_len - 1] {
-        all_painted = false;
-        println!("{start} {fence_len}");
-    }
-
-    if all_painted {
+    // All painted case
+    if merged_sections.len() == 1 && merged_sections[0].0 == 0 && merged_sections[0].1 == fence_len {
         println!("All painted");
+        return;
+    }
+
+    // Otherwise: look for empty parts
+    if merged_sections[0].0 != 0 {
+        println!("{} {}", 0, merged_sections[0].0);
+    }
+    let nb_sections = merged_sections.len();
+    for i in 1..nb_sections {
+        println!("{} {}", merged_sections[i - 1].1, merged_sections[i].0);
+    }
+    if merged_sections[nb_sections - 1].1 != fence_len {
+        println!("{} {}", merged_sections[nb_sections - 1].1, fence_len);
     }
 }
 
