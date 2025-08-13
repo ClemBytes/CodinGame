@@ -32,6 +32,8 @@ struct StateWithParent<'a> {
 
 impl Eq for StateWithParent<'_> {}
 
+#[allow(clippy::non_canonical_partial_ord_impl)]
+// Had to cheat to define Ord on f64
 impl PartialOrd for StateWithParent<'_> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         // Other and self inversed to do a MIN-heap
