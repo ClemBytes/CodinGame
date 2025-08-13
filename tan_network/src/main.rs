@@ -59,19 +59,19 @@ impl NetworkDescription {
         let mut input_line = String::new();
         io::stdin().read_line(&mut input_line).unwrap();
         let start_id = input_line.trim().split_once(":").unwrap().1.to_string();
-        let mut input_line = String::new();
+        input_line.clear();
         io::stdin().read_line(&mut input_line).unwrap();
         let end_id = input_line.trim().split_once(":").unwrap().1.to_string();
 
         // Number of stops in network
-        let mut input_line = String::new();
+        input_line.clear();
         io::stdin().read_line(&mut input_line).unwrap();
         let nb_stops: u32 = input_line.trim().parse().unwrap();
 
         // List of stops
         let mut stops: HashMap<String, Stop> = HashMap::new();
         for _ in 0..nb_stops {
-            let mut input_line = String::new();
+            input_line.clear();
             io::stdin().read_line(&mut input_line).unwrap();
             let stop = input_line.trim().split_once(":").unwrap().1;
             let stop_infos: Vec<&str> = stop.split(",").collect();
@@ -107,7 +107,7 @@ impl NetworkDescription {
         // List of connections
         let mut graph: HashMap<String, Vec<String>> = HashMap::new();
         for _ in 0..nb_connections {
-            let mut input_line = String::new();
+            input_line.clear();
             io::stdin().read_line(&mut input_line).unwrap();
             let (start, end) = input_line.trim().split_once(" ").unwrap();
             let start_id = start.split_once(":").unwrap().1.to_string();
