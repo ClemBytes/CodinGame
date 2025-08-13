@@ -24,22 +24,22 @@ impl Stop {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-struct StateAndDistance {
+struct StateWithParent {
     id: String,
-    distance: f64,
+    distance_from_start: f64,
     parent_stop_id: String,
 }
 
-impl Eq for StateAndDistance {}
+impl Eq for StateWithParent {}
 
-impl PartialOrd for StateAndDistance {
+impl PartialOrd for StateWithParent {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         // Other and self inversed to do a MIN-heap
-        other.distance.partial_cmp(&self.distance)
+        other.distance_from_start.partial_cmp(&self.distance_from_start)
     }
 }
 
-impl Ord for StateAndDistance {
+impl Ord for StateWithParent {
     fn cmp(&self, other: &Self) -> Ordering {
         self.partial_cmp(other).unwrap()
     }
@@ -50,7 +50,7 @@ struct NetworkDescription {
     start_id: String,
     end_id: String,
     stops: HashMap<String, Stop>,
-    graph: HashMap<String, Vec<StateAndDistance>>,
+    graph: HashMap<String, Vec<String>>,
 }
 
 impl NetworkDescription {
@@ -105,24 +105,18 @@ impl NetworkDescription {
         let nb_connections: u32 = input_line.trim().parse().unwrap();
 
         // List of connections
-        let mut graph: HashMap<String, Vec<StateAndDistance>> = HashMap::new();
+        let mut graph: HashMap<String, Vec<String>> = HashMap::new();
         for _ in 0..nb_connections {
             let mut input_line = String::new();
             io::stdin().read_line(&mut input_line).unwrap();
             let (start, end) = input_line.trim().split_once(" ").unwrap();
             let start_id = start.split_once(":").unwrap().1.to_string();
-            let start_stop = stops.get(&start_id).unwrap();
             let end_id = end.split_once(":").unwrap().1.to_string();
             if start_id == end_id {
                 continue;
             }
-            let end_stop = stops.get(&end_id).unwrap();
             let e = graph.entry(start_id).or_default();
-            e.push(StateAndDistance {
-                id: end_id,
-                distance: start_stop.distance(end_stop),
-                parent_stop_id: "".to_string(),
-            });
+            e.push(end_id);
         }
 
         NetworkDescription {
@@ -133,27 +127,31 @@ impl NetworkDescription {
         }
     }
 
+    fn distance_between_two_stops(&self, id1: String, id2: String) -> f64 {
+        self.stops.get(&id1).unwrap().distance(self.stops.get(&id2).unwrap())
+    }
+
     fn shortest_path(&self) {
         let mut visited_nodes = BTreeSet::new();
-        let mut min_heap: BinaryHeap<StateAndDistance> = BinaryHeap::new();
+        let mut min_heap: BinaryHeap<StateWithParent> = BinaryHeap::new();
         let mut previous: BTreeMap<String, String> = BTreeMap::new();
-        min_heap.push(StateAndDistance {
+        min_heap.push(StateWithParent {
             id: self.start_id.clone(),
-            distance: 0.,
+            distance_from_start: 0.,
             parent_stop_id: "".to_string(),
         });
-        while let Some(current_node) = min_heap.pop() {
-            if visited_nodes.contains(&current_node.id) {
+        while let Some(current_state) = min_heap.pop() {
+            if visited_nodes.contains(&current_state.id) {
                 continue;
             }
-            visited_nodes.insert(current_node.id.clone());
-            previous.insert(current_node.id.clone(), current_node.parent_stop_id.clone());
+            visited_nodes.insert(current_state.id.clone());
+            previous.insert(current_state.id.clone(), current_state.parent_stop_id.clone());
 
             // Found the end ?
-            if current_node.id == self.end_id {
+            if current_state.id == self.end_id {
                 // Backtrace the path and store it
                 let mut path: Vec<String> = vec![];
-                let current = current_node.clone();
+                let current = current_state.clone();
                 path.push(current.id.clone());
                 let mut id = current.id;
                 while id != self.start_id {
@@ -170,15 +168,15 @@ impl NetworkDescription {
             }
 
             // Otherwise
-            let neighbors = self.graph.get(&current_node.id).unwrap();
+            let neighbors = self.graph.get(&current_state.id).unwrap();
             for neighbor in neighbors {
                 // Update previous
-                assert_ne!(neighbor.id, current_node.id, "{:?}", neighbor);
+                assert_ne!(neighbor.clone(), current_state.id.clone(), "{:?}", neighbor);
                 // Add node to heap
-                min_heap.push(StateAndDistance {
-                    id: neighbor.id.clone(),
-                    distance: current_node.distance + neighbor.distance,
-                    parent_stop_id: current_node.id.clone(),
+                min_heap.push(StateWithParent {
+                    id: neighbor.clone(),
+                    distance_from_start: current_state.distance_from_start + self.distance_between_two_stops(neighbor.to_string(), current_state.id.clone()),
+                    parent_stop_id: current_state.id.clone(),
                 });
             }
         }
