@@ -17,3 +17,10 @@ Here is my CodinGame profile → [ClemBytes](https://www.codingame.com/profile/2
 - **Goal:** Given painted intervals of a fence (possibly overlapping or non-continuous), find the unpainted intervals.
 - **Topics:** Intervals.
 - **Tech:** 🦀 Rust.
+
+--- 
+
+### ➡️ [Create 'Turn Here' Signs](https://www.codingame.com/training/easy/create-turn-here-signs) — **Easy**
+- **Goal:** Create ASCII art of a turn sign, given some directions.
+- **Topics:** Loops, logic, string manipulation, ASCII art.
+- **Tech:** 🐍 Python.
