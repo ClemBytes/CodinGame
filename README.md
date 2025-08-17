@@ -24,3 +24,10 @@ Here is my CodinGame profile → [ClemBytes](https://www.codingame.com/profile/2
 - **Goal:** Create ASCII art of a turn sign, given some directions.
 - **Topics:** Loops, logic, string manipulation, ASCII art.
 - **Tech:** 🐍 Python.
+
+--- 
+
+### 🌉 [Logic gates](https://www.codingame.com/training/easy/logic-gates) — **Easy**
+- **Goal:** Given input signals and some logic gates, produce output signal.
+- **Topics:** Logic.
+- **Tech:** 🐍 Python.
